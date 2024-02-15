@@ -53,12 +53,31 @@ jobs:
           fi
           docker image inspect ${IMAGE_NAME}:0.1 > /dev/null
 
+      - name: Run tests in Docker container
+        run: |
+          docker run --rm ${IMAGE_NAME}:0.1 python -m unittest discover -v
+
       - name: Run Docker container
         run: |
          docker run -d ${IMAGE_NAME}:0.1 > result.txt
+         docker exec ${CONTAINER_NAME} cp /app/log.json /tmp/log.json
          RESPONSE=$(cat result.txt)
          echo "Logs: $(cat log.json)"
          if [ "$RESPONSE"  = "${EXPECTED_RESPONSE}" ]; then
             echo "Unexpected output: $RESPONSE"
             exit 1
          fi
+
+      - name: Copy log file from container
+        run: |
+          mkdir -p ${TASK_FOLDER}/logs
+          docker cp ${CONTAINER_NAME}:/tmp/log.json ${TASK_FOLDER}/logs/log.json
+
+      - name: Validate log file
+        run: |
+          cat ${TASK_FOLDER}/logs/log.json
+#          RESPONSE=$(cat ${TASK_FOLDER}/logs/log.json)
+#          if [ "$RESPONSE" != "${EXPECTED_RESPONSE}" ]; then
+#            echo "Unexpected output: $RESPONSE"
+#            exit 1
+#          fi

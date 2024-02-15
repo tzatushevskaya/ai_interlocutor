@@ -1,8 +1,8 @@
 import argparse
+import functools
 import json
 import logging
 import wave
-from datetime import datetime
 from logging import Logger
 from pathlib import Path
 
@@ -66,6 +66,19 @@ def setup_logger(style=None, filename=None, json_formatter=False):
     return configured_logger
 
 
+def handle_errors(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            logger.error(f"An error occurred in {func.__name__}: {e}")
+            return None
+
+    return wrapper
+
+
+@handle_errors
 def convert_speech_to_text(audio_file):
     """
     Convert speech from an audio file to text using Google's Speech Recognition.
@@ -83,6 +96,7 @@ def convert_speech_to_text(audio_file):
         return text
 
 
+@handle_errors
 def process_text_through_gpt(text):
     """
     Process the given text through a preconfigured GPT model.
@@ -101,6 +115,7 @@ def process_text_through_gpt(text):
     return generated_text
 
 
+@handle_errors
 def convert_text_to_speech(text):
     """
     Convert the given text to speech using Google Text-to-Speech (gTTS) library.
@@ -115,6 +130,7 @@ def convert_text_to_speech(text):
     return tts
 
 
+@handle_errors
 def play_audio(audio_file):
     """
     Play the audio file.
@@ -129,6 +145,7 @@ def play_audio(audio_file):
         pygame.time.Clock().tick(10)
 
 
+@handle_errors
 def process_audio(audio_file):
     """
     Process the audio file.
@@ -155,6 +172,7 @@ def process_audio(audio_file):
     return output_audio_file
 
 
+@handle_errors
 def is_valid_audio_format(audio_file):
     """
     Check if the given audio file is in a valid format (WAV or MP3).
@@ -181,6 +199,7 @@ def is_valid_audio_format(audio_file):
         return False
 
 
+@handle_errors
 def process_audio(input_audio_file):
     """
     Main function to process the input audio file.
@@ -218,9 +237,10 @@ def run():
 
     # Setup logger
     global logger
-    current_timestamp: str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    folder_run: str = f"run_at_{current_timestamp}"
-    local_log_file = Path(f"./{folder_run}_logs.json")
+    # current_timestamp: str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    # folder_run: str = f"run_at_{current_timestamp}"
+    # local_log_file = Path(f"./{folder_run}_logs.json")
+    local_log_file = Path("./log.json")
     logger = setup_logger(filename=local_log_file, json_formatter=True)
 
     parser = argparse.ArgumentParser(description="AI Interlocutor")
