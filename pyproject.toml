@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "interlocutor"
+version = "0.1.0"
+authors = [
+    {name = "Tatyana Zatushevskaya", email = "tzatushevskaya@gmail.com"},
+]
+description = "AI Interlocutor"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+]
+dynamic = ["dependencies"]
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
+
+[project.scripts]
+interlocutor_cli = "main:cli"
