@@ -1,12 +1,13 @@
 import argparse
+import wave
+from pathlib import Path
 
+import pygame
 import speech_recognition as sr
 from gtts import gTTS
-import pygame
-from transformers import GPT2LMHeadModel, GPT2Tokenizer
-from pathlib import Path
-import wave
 from pydub import AudioSegment
+from transformers import GPT2LMHeadModel, GPT2Tokenizer
+
 from logger import setup_logger
 
 # Setup logger
@@ -58,7 +59,7 @@ def convert_text_to_speech(text):
     Returns:
     - gTTS: The gTTS object containing the audio data.
     """
-    tts = gTTS(text=text, lang='en')
+    tts = gTTS(text=text, lang="en")
     return tts
 
 
@@ -112,13 +113,13 @@ def is_valid_audio_format(audio_file):
     Returns:
     - bool: True if the audio file is in a valid format, False otherwise.
     """
-    if str(audio_file).endswith('.wav'):
+    if str(audio_file).endswith(".wav"):
         try:
-            with wave.open(str(audio_file), 'rb') as f:
+            with wave.open(str(audio_file), "rb") as f:
                 return True
         except wave.Error:
             return False
-    elif str(audio_file).endswith('.mp3'):
+    elif str(audio_file).endswith(".mp3"):
         try:
             AudioSegment.from_mp3(str(audio_file))
             return True
@@ -152,6 +153,9 @@ def process_audio(input_audio_file):
 
     # Clean up temporary files
     Path(output_audio_file).unlink()
+    print("The task is completed.")
+
+
 def run():
     """Runs stages of audio processing in the conceived order,
     possibly with parameters."""
@@ -176,4 +180,6 @@ def run():
     is_interactive = True if args.interactive else False
     input_file = Path(args.file)
     process_audio(input_file)
+
+
 run()

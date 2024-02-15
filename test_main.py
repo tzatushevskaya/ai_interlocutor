@@ -1,7 +1,6 @@
 import unittest
 from unittest.mock import MagicMock, patch
-import tempfile
-import os
+
 from main import (
     convert_speech_to_text,
     process_text_through_gpt,
@@ -10,6 +9,7 @@ from main import (
     process_audio,
     is_valid_audio_format,
 )
+
 
 class TestMain(unittest.TestCase):
 
@@ -38,8 +38,12 @@ class TestMain(unittest.TestCase):
         model_mock.generate.return_value = [output_mock]
         output_mock.tolist.return_value = [1, 2, 3]  # Dummy output
         tokenizer_mock.decode.return_value = expected_generated_text
-        with patch("transformers.GPT2Tokenizer.from_pretrained", return_value=tokenizer_mock):
-            with patch("transformers.GPT2LMHeadModel.from_pretrained", return_value=model_mock):
+        with patch(
+            "transformers.GPT2Tokenizer.from_pretrained", return_value=tokenizer_mock
+        ):
+            with patch(
+                "transformers.GPT2LMHeadModel.from_pretrained", return_value=model_mock
+            ):
                 generated_text = process_text_through_gpt(text)
         self.assertEqual(generated_text, expected_generated_text)
 
@@ -68,19 +72,27 @@ class TestMain(unittest.TestCase):
         mock_gpt_response = "generated text"
         with patch("main.convert_speech_to_text", return_value=mock_text):
             with patch("main.process_text_through_gpt", return_value=mock_gpt_response):
-                with patch("main.convert_text_to_speech") as convert_text_to_speech_mock:
+                with patch(
+                    "main.convert_text_to_speech"
+                ) as convert_text_to_speech_mock:
                     convert_text_to_speech_mock.return_value = MagicMock()
                     with patch("main.play_audio") as play_audio_mock:
                         output_audio_file = process_audio(audio_file)
-                        convert_text_to_speech_mock.assert_called_once_with(mock_gpt_response)
-                        play_audio_mock.assert_called_once_with(expected_output_audio_file)
+                        convert_text_to_speech_mock.assert_called_once_with(
+                            mock_gpt_response
+                        )
+                        play_audio_mock.assert_called_once_with(
+                            expected_output_audio_file
+                        )
                         self.assertEqual(output_audio_file, expected_output_audio_file)
 
     def test_is_valid_audio_format(self):
         valid_audio_file_wav = "valid_audio.wav"
         valid_audio_file_mp3 = "valid_audio.mp3"
         invalid_audio_file = "invalid_audio.xyz"
-        with patch("wave.open") as wave_open_mock, patch("pydub.AudioSegment.from_mp3") as from_mp3_mock:
+        with patch("wave.open") as wave_open_mock, patch(
+            "pydub.AudioSegment.from_mp3"
+        ) as from_mp3_mock:
             # Valid WAV file
             wave_open_mock.return_value = MagicMock()
             self.assertTrue(is_valid_audio_format(valid_audio_file_wav))
@@ -89,6 +101,7 @@ class TestMain(unittest.TestCase):
             self.assertTrue(is_valid_audio_format(valid_audio_file_mp3))
             # Invalid file
             self.assertFalse(is_valid_audio_format(invalid_audio_file))
+
 
 if __name__ == "__main__":
     unittest.main()

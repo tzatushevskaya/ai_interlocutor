@@ -59,8 +59,14 @@ This Python application automates the conversion of speech to text, processes th
 
 1. Ensure you have Docker installed on your system.
 2. Clone the repository to your local machine.
+    ```bash
+    git clone https://github.com/tzatushevskaya/ai_interlocutor.git
+    ```
 3. Navigate to the project directory.
-4. Build the Docker image using the provided Dockerfile (if not already built):
+    ```bash
+    cd ./ai_interlocutor
+    ```
+4. Build the Docker image using the provided Dockerfile:
     ```bash
     docker build -t interlocutor .
     ```
