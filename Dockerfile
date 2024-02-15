@@ -14,5 +14,5 @@ RUN export CONDA_PREFIX=/root/micromamba && \
     pip install -e . && \
     micromamba clean -ay
 
-COPY logger.py main.py ./
+COPY main.py ./
 ENTRYPOINT source ~/.bashrc && micromamba activate && interlocutor_cli

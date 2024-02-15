@@ -1,5 +1,7 @@
 import argparse
+import logging
 import wave
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 import pygame
@@ -8,10 +10,20 @@ from gtts import gTTS
 from pydub import AudioSegment
 from transformers import GPT2LMHeadModel, GPT2Tokenizer
 
-from logger import setup_logger
 
-# Setup logger
-logger = setup_logger("log.json")
+def setup_logger(log_file):
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.INFO)
+
+    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+
+    # Create a rotating file handler
+    handler = RotatingFileHandler(log_file, maxBytes=100000, backupCount=1)
+    handler.setLevel(logging.INFO)
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+
+    return logger
 
 
 def convert_speech_to_text(audio_file):
@@ -159,6 +171,10 @@ def process_audio(input_audio_file):
 def run():
     """Runs stages of audio processing in the conceived order,
     possibly with parameters."""
+
+    # Setup logger
+    logger = setup_logger("log.json")
+
     parser = argparse.ArgumentParser(description="AI Interlocutor")
 
     parser.add_argument(
