@@ -1,3 +1,6 @@
+"""
+Command-line app.
+"""
 import argparse
 import wave
 from pathlib import Path
