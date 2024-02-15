@@ -1,0 +1,64 @@
+name: AI Interlocutor
+on:
+  push:
+    paths:
+      - 'main.py'
+      - ".github/workflows/workflow.yml"
+
+env:
+  EXPECTED_RESPONSE: "The task is completed."
+  TASK_FOLDER: "${{ github.workspace }}"
+  IMAGE_NAME: "ai_interlocutor"
+  CONTAINER_NAME: "app-container"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Check if directory exists
+        run: |
+          if [ -d ${TASK_FOLDER} ]; then
+          echo "Directory exists"
+          else
+          echo "Directory does not exist"
+          exit 1
+          fi
+
+      - name: Check if docker is available
+        run: docker info
+
+      - name: Check if the directory has Dockerfile
+        run: |
+          if [ -f ${TASK_FOLDER}/Dockerfile ]; then
+          echo "Dockerfile exists."
+          else
+          echo "Dockerfile not found."
+          exit 1
+          fi
+
+      - name: Build Docker image
+        run: |
+          cd ${TASK_FOLDER}
+          docker build -t ${IMAGE_NAME}:0.1 -f ./Dockerfile .
+
+      - name: Verify if the image was created
+        run: |
+          docker images | grep ${IMAGE_NAME}
+          if [ $? -eq 0 ]; then
+          echo "Image was created"
+          else exit 1
+          fi
+          docker image inspect ${IMAGE_NAME}:0.1 > /dev/null
+
+      - name: Run Docker container
+        run: |
+         docker run -d ${IMAGE_NAME}:0.1 > result.txt
+         RESPONSE=$(cat result.txt)
+         echo "Logs: $(cat log.json)"
+         if [ "$RESPONSE"  = "${EXPECTED_RESPONSE}" ]; then
+            echo "Unexpected output: $RESPONSE"
+            exit 1
+         fi
