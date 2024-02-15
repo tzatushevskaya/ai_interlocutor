@@ -1,5 +1,5 @@
-transformers==4.15.0
-speechrecognition==3.8.1
-gtts==2.2.3
+transformers==4.37.2
+speechrecognition==3.10.1
+gtts==2.5.1
 pydub==0.25.1
-pygame==2.1.2
+pygame==2.5.2
