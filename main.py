@@ -1,29 +1,69 @@
 import argparse
+import json
 import logging
 import wave
-from logging.handlers import RotatingFileHandler
+from datetime import datetime
+from logging import Logger
 from pathlib import Path
 
+import colorlog
 import pygame
 import speech_recognition as sr
 from gtts import gTTS
 from pydub import AudioSegment
 from transformers import GPT2LMHeadModel, GPT2Tokenizer
 
+logger: Logger = None
 
-def setup_logger(log_file):
-    logger = logging.getLogger(__name__)
-    logger.setLevel(logging.INFO)
 
-    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+class JSONFormatter(logging.Formatter):
+    def format(self, record):
+        log_record = {
+            "timestamp": self.formatTime(record),
+            "level": record.levelname,
+            "message": record.getMessage(),
+            "module": record.module,
+            "funcName": record.funcName,
+            "lineNo": record.lineno,
+        }
+        return json.dumps(log_record)
 
-    # Create a rotating file handler
-    handler = RotatingFileHandler(log_file, maxBytes=100000, backupCount=1)
-    handler.setLevel(logging.INFO)
+
+def setup_logger(style=None, filename=None, json_formatter=False):
+    # Create a logger, use the LOGGING_LEVEL environment variable to change the logging level
+    logging.basicConfig(level=logging.INFO, filename=filename)
+    configured_logger: Logger = logging.getLogger(__name__)
+    configured_logger.setLevel(logging.INFO)
+
+    # Create a formatter
+    color_formatter = colorlog.ColoredFormatter(
+        (
+            "%(white)s%(asctime)s - [%(cyan)s%(levelname)s%(reset)s]"
+            "[%(green)s%(filename)s%(reset)s:"
+            "%(yellow)s%(funcName)s:%(purple)s%(lineno)s%(reset)s] %(message)s"
+        )
+    )
+    formatter = logging.Formatter(
+        "%(asctime)s - [%(levelname)s][%(filename)s:%(funcName)s:%(lineno)s] %(message)s"
+    )
+
+    # Create a handler
+    handler = logging.StreamHandler()
     handler.setFormatter(formatter)
-    logger.addHandler(handler)
+    if style and style == "color":
+        handler.setFormatter(color_formatter)
 
-    return logger
+    # Add the handler to the logger
+    configured_logger.addHandler(handler)
+    configured_logger.propagate = False
+
+    if json_formatter:
+        log_json_handler = logging.FileHandler(filename, mode="a")
+        json_formatter = JSONFormatter()
+        log_json_handler.setFormatter(json_formatter)
+        configured_logger.addHandler(log_json_handler)
+
+    return configured_logger
 
 
 def convert_speech_to_text(audio_file):
@@ -163,6 +203,10 @@ def process_audio(input_audio_file):
     logger.info("Playing the resulting audio...")
     play_audio(output_audio_file)
 
+    # Check the response in the audio file:
+    response = convert_speech_to_text(output_audio_file)
+    logger.info(f'The obtained response is "{response}".')
+
     # Clean up temporary files
     Path(output_audio_file).unlink()
     print("The task is completed.")
@@ -173,7 +217,11 @@ def run():
     possibly with parameters."""
 
     # Setup logger
-    logger = setup_logger("log.json")
+    global logger
+    current_timestamp: str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    folder_run: str = f"run_at_{current_timestamp}"
+    local_log_file = Path(f"./{folder_run}_logs.json")
+    logger = setup_logger(filename=local_log_file, json_formatter=True)
 
     parser = argparse.ArgumentParser(description="AI Interlocutor")
 
@@ -194,8 +242,11 @@ def run():
 
     args = parser.parse_args()
     is_interactive = True if args.interactive else False
-    input_file = Path(args.file)
+    input_file = (
+        input(
+            "Please enter the path to the audio file you want to process (wav or mp3):"
+        )
+        if is_interactive
+        else Path(args.file)
+    )
     process_audio(input_file)
-
-
-run()
