@@ -4,3 +4,7 @@ pydub==0.25.1
 pygame==2.5.2
 speechrecognition==3.10.1
 transformers==4.37.2
+torch==2.2.0
+openai-whisper==20231117
+soundfile==0.12.1
+ffmpeg-downloader==0.3.0

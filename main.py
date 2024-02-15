@@ -2,7 +2,9 @@ import argparse
 import functools
 import json
 import logging
+import shutil
 import wave
+from datetime import datetime
 from logging import Logger
 from pathlib import Path
 
@@ -12,8 +14,6 @@ import speech_recognition as sr
 from gtts import gTTS
 from pydub import AudioSegment
 from transformers import GPT2LMHeadModel, GPT2Tokenizer
-
-logger: Logger = None
 
 
 class JSONFormatter(logging.Formatter):
@@ -29,10 +29,9 @@ class JSONFormatter(logging.Formatter):
         return json.dumps(log_record)
 
 
-def setup_logger(style=None, filename=None, json_formatter=False):
-    # Create a logger, use the LOGGING_LEVEL environment variable to change the logging level
-    logging.basicConfig(level=logging.INFO, filename=filename)
-    configured_logger: Logger = logging.getLogger(__name__)
+def setup_logger(logger_name, style=None, filename=None, json_formatter=False):
+    # Create a logger
+    configured_logger: Logger = logging.getLogger(logger_name)
     configured_logger.setLevel(logging.INFO)
 
     # Create a formatter
@@ -66,19 +65,65 @@ def setup_logger(style=None, filename=None, json_formatter=False):
     return configured_logger
 
 
-def handle_errors(func):
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs):
-        try:
-            return func(*args, **kwargs)
-        except Exception as e:
-            logger.error(f"An error occurred in {func.__name__}: {e}")
-            return None
-
-    return wrapper
+current_timestamp: str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+local_log_file = Path(f"log_{current_timestamp}.json")
+logger = setup_logger(__name__, filename=local_log_file, json_formatter=True)
 
 
-@handle_errors
+def handle_errors(logger):
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            try:
+                return func(*args, **kwargs)
+            except Exception as e:
+                logger.error(f"An error occurred in {func.__name__}: {e}")
+                raise e
+
+        return wrapper
+
+    return decorator
+
+
+@handle_errors(logger)
+def find_file(file_name):
+    # Search for the file recursively starting from the current directory
+    found_files = list(Path.cwd().rglob(file_name))
+
+    if found_files:
+        return found_files[0]  # Return the first found file
+    else:
+        raise FileNotFoundError  # Return None if the file is not found
+
+
+@handle_errors(logger)
+def copy_file_and_get_filename(file_path_str):
+    # Convert the input string to a Path object
+    supposed_path = Path(file_path_str)
+    # Find existing path
+    file_path = (
+        supposed_path if supposed_path.exists() else find_file(supposed_path.name)
+    )
+
+    # Get the filename
+    filename = file_path.name
+
+    # Copy the file to the directory where the script is placed
+    destination_path = Path(__file__).resolve().parent / filename
+    # destination_path = Path.cwd() / filename
+
+    shutil.copy(file_path, destination_path)
+
+    return filename
+
+
+@handle_errors(logger)
+def reformat_to_wav(filename):
+    sound = AudioSegment.from_mp3(filename)
+    sound.export(filename, format="wav")
+
+
+@handle_errors(logger)
 def convert_speech_to_text(audio_file):
     """
     Convert speech from an audio file to text using Google's Speech Recognition.
@@ -92,11 +137,11 @@ def convert_speech_to_text(audio_file):
     recognizer = sr.Recognizer()
     with sr.AudioFile(audio_file) as source:
         audio_data = recognizer.record(source)
-        text = recognizer.recognize_google(audio_data)
+        text = recognizer.recognize_whisper(audio_data)
         return text
 
 
-@handle_errors
+@handle_errors(logger)
 def process_text_through_gpt(text):
     """
     Process the given text through a preconfigured GPT model.
@@ -112,10 +157,56 @@ def process_text_through_gpt(text):
     input_ids = tokenizer.encode(text, return_tensors="pt")
     output = model.generate(input_ids, max_length=100, num_return_sequences=1)
     generated_text = tokenizer.decode(output[0], skip_special_tokens=True)
-    return generated_text
+    cleaned_up_text = remove_repetitive_sentences(generated_text)
+    return cleaned_up_text
 
 
-@handle_errors
+@handle_errors(logger)
+def remove_repetitive_sentences(text):
+    """
+    Remove repetitive sentences from a string.
+
+    Parameters:
+    - text (str): The input text containing sentences.
+
+    Returns:
+    - str: The text with repetitive sentences removed.
+    """
+    # Find the index of the last occurrence of '.'
+    last_period_index = text.rfind(".")
+
+    if last_period_index == -1:
+        return text
+
+    # Extract the text before the last period
+    text_before_last_period = text[: last_period_index + 1]
+
+    # Split the text before the last period into sentences
+    sentences = text_before_last_period.split(".")
+
+    # Initialize a set to store unique sentences
+    unique_sentences = set()
+
+    # Initialize a list to store non-repetitive sentences
+    non_repetitive_sentences = []
+
+    # Iterate over each sentence in the text
+    for sentence in sentences:
+        # Strip leading and trailing whitespace
+        sentence = sentence.strip()
+
+        # Add non-empty and unique sentences to the set
+        if sentence and sentence not in unique_sentences:
+            unique_sentences.add(sentence)
+            non_repetitive_sentences.append(sentence)
+
+    # Join the non-repetitive sentences back into a string
+    result = ".".join(non_repetitive_sentences)
+
+    return result.strip()
+
+
+@handle_errors(logger)
 def convert_text_to_speech(text):
     """
     Convert the given text to speech using Google Text-to-Speech (gTTS) library.
@@ -130,7 +221,7 @@ def convert_text_to_speech(text):
     return tts
 
 
-@handle_errors
+@handle_errors(logger)
 def play_audio(audio_file):
     """
     Play the audio file.
@@ -138,6 +229,7 @@ def play_audio(audio_file):
     Parameters:
     - audio_file (str): Path to the audio file to play.
     """
+    reformat_to_wav(audio_file)
     pygame.mixer.init()
     pygame.mixer.music.load(audio_file)
     pygame.mixer.music.play()
@@ -145,7 +237,7 @@ def play_audio(audio_file):
         pygame.time.Clock().tick(10)
 
 
-@handle_errors
+@handle_errors(logger)
 def process_audio(audio_file):
     """
     Process the audio file.
@@ -166,14 +258,14 @@ def process_audio(audio_file):
     tts = convert_text_to_speech(gpt_response)
 
     # Save text-to-speech output to a temporary file
-    output_audio_file = "samples/output_audio.mp3"
+    output_audio_file = "output_audio.wav"
     tts.save(output_audio_file)
 
     return output_audio_file
 
 
-@handle_errors
-def is_valid_audio_format(audio_file):
+@handle_errors(logger)
+def validate_and_reformat_audio_file(audio_file):
     """
     Check if the given audio file is in a valid format (WAV or MP3).
 
@@ -183,24 +275,19 @@ def is_valid_audio_format(audio_file):
     Returns:
     - bool: True if the audio file is in a valid format, False otherwise.
     """
-    if str(audio_file).endswith(".wav"):
+    if audio_file.endswith(".wav") or audio_file.endswith(".mp3"):
+        reformat_to_wav(audio_file)
         try:
-            with wave.open(str(audio_file), "rb") as f:
+            with wave.open(audio_file, "rb") as f:
                 return True
         except wave.Error:
-            return False
-    elif str(audio_file).endswith(".mp3"):
-        try:
-            AudioSegment.from_mp3(str(audio_file))
-            return True
-        except Exception:
             return False
     else:
         return False
 
 
-@handle_errors
-def process_audio(input_audio_file):
+@handle_errors(logger)
+def process_audio_file(input_audio_file):
     """
     Main function to process the input audio file.
 
@@ -209,7 +296,7 @@ def process_audio(input_audio_file):
 
     """
     # Validate audio file format
-    if not is_valid_audio_format(input_audio_file):
+    if not validate_and_reformat_audio_file(input_audio_file):
         error_message = "Error: Unsupported audio file format. Please provide a WAV or MP3 audio file."
         print(error_message)
         logger.error(error_message)
@@ -235,21 +322,13 @@ def run():
     """Runs stages of audio processing in the conceived order,
     possibly with parameters."""
 
-    # Setup logger
-    global logger
-    # current_timestamp: str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    # folder_run: str = f"run_at_{current_timestamp}"
-    # local_log_file = Path(f"./{folder_run}_logs.json")
-    local_log_file = Path("./log.json")
-    logger = setup_logger(filename=local_log_file, json_formatter=True)
-
     parser = argparse.ArgumentParser(description="AI Interlocutor")
 
     parser.add_argument(
         "--file",
         "-f",
         type=str,
-        default=Path("./samples/output_audio.mp3"),
+        default="samples/input_audio.wav",
         help="\tPath to audio file to process."
         "The default value is test sample audio file.",
     )
@@ -267,6 +346,13 @@ def run():
             "Please enter the path to the audio file you want to process (wav or mp3):"
         )
         if is_interactive
-        else Path(args.file)
+        else args.file
     )
-    process_audio(input_file)
+
+    filename = copy_file_and_get_filename(input_file)
+    process_audio_file(filename)
+    Path(filename).unlink()
+
+
+if __name__ == "__main__":
+    run()

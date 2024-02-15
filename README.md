@@ -53,49 +53,89 @@ Evaluation Criteria:
 - Documentation: The provided documentation is clear, concise, and sufficient for setting up and using the application.
 - Error Handling: The application gracefully handles and reports errors, such as unsupported audio formats or failure in any processing stage.
 
-This Python application automates the conversion of speech to text, processes the text through a preconfigured GPT model acting as a specific expert, converts the GPT's textual response back to speech, and finally plays the resulting audio.
+
+This Python application automates the conversion of speech to text, processes the text through a preconfigured GPT model
+acting as a specific expert, converts the GPT's textual response back to speech, and finally plays the resulting audio.
+
+## Prerequisites
+
+This project requires a Linux operating system to run.
 
 ## Installation
 
-1. Ensure you have Docker installed on your system.
-2. Clone the repository to your local machine.
+1. Clone the repository to your local machine.
     ```bash
     git clone https://github.com/tzatushevskaya/ai_interlocutor.git
     ```
-3. Navigate to the project directory.
+2. Navigate to the project directory.
     ```bash
     cd ./ai_interlocutor
     ```
-4. Build the Docker image using the provided Dockerfile:
-    ```bash
-    docker build -t interlocutor .
-    ```
+
+It's recommended to run this project in a virtual environment to manage dependencies cleanly. 
+You can use tools like `venv` or `micromamba` to create a virtual environment.
+
+### Using micromamba
+
+If you have micromamba installed, you can create a virtual environment and install dependencies like this:
+
+```bash
+# Create a new virtual environment
+micromamba create -n myenv python=3.12
+
+# Activate the virtual environment
+micromamba activate myenv
+
+# Install project dependencies
+pip install --no-cache-dir -r requirements.txt .
+```
+
+### Using venv
+
+If you prefer using venv, you can create and activate a virtual environment like this:
+
+```bash
+# Create a new virtual environment
+python -m venv myenv
+
+# Activate the virtual environment 
+source myenv/bin/activate
+
+# Install project dependencies
+pip install --no-cache-dir -r requirements.txt .
+```
+
+Install the ffmpeg:
+```bash
+ffdl install -y
+```
 
 ## Running the Application
 
-### With Parameters
-
-Run the Docker container with the desired parameters:
-```bash
-docker run --rm interlocutor --file <path_to_audio_file>
-```
-Replace `<path_to_audio_file>` with the path to the audio file you want to process.
-
 ### Without Parameters (Demo Mode)
-Run the Docker container in interactive mode:
+Run the app without parameters (it will process the existing audio file):
 ```bash
-docker run -t interlocutor
+python main.py
 ```
 
 ### Without Parameters (Interactive Mode)
-Run the Docker container in interactive mode:
+Run the app in interactive mode:
 ```bash
-docker run interlocutor -i
+python main.py -i
 ```
+
+### With Parameters
+
+Run the app with the desired parameters:
+```bash
+python main.py <path_to_audio_file>
+```
+Replace `<path_to_audio_file>` with the path to the audio file you want to process.
+
 Follow the prompts to provide the path to the input audio file when prompted.
 
 ## Testing the Application
-Run the Docker container to execute the unit tests:
+Execute the unit tests:
 ```bash
-docker run --rm -it interlocutor python -m unittest
+python test_main.py
 ```
