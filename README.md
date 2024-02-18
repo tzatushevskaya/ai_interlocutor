@@ -81,7 +81,7 @@ If you have micromamba installed, you can create a virtual environment and insta
 
 ```bash
 # Create a new virtual environment
-micromamba create -n myenv python=3.12
+micromamba create -n myenv python=3.9.16
 
 # Activate the virtual environment
 micromamba activate myenv

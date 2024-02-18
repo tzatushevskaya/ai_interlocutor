@@ -1,3 +1,33 @@
+"""
+This module implements an AI Interlocutor, which automates the conversion of speech to text,
+processes the text through a preconfigured GPT model acting as a specific expert,
+converts the GPT's textual response back to speech, and finally plays the resulting audio.
+
+The main functionalities include:
+- Converting speech from an audio file to text using Google's Speech Recognition.
+- Processing the text through a preconfigured GPT model.
+- Converting the GPT model's textual response back to speech using Google Text-to-Speech (gTTS).
+- Playing the resulting audio.
+
+Dependencies:
+- `argparse`: For parsing command-line arguments.
+- `functools`: For handling errors with decorators.
+- `json`: For JSON serialization of log records.
+- `logging`: For logging messages to console and file.
+- `shutil`: For file operations like copying.
+- `wave`: For handling audio files.
+- `datetime`: For generating timestamps.
+- `colorlog`: For colorized logging output.
+- `pygame`: For audio playback.
+- `speech_recognition`: For converting speech to text.
+- `gtts`: For text-to-speech conversion.
+- `pydub`: For audio file manipulation.
+- `transformers`: For accessing preconfigured GPT models.
+
+Usage:
+The script can be run with optional arguments to specify the input audio file and execution mode.
+"""
+
 import argparse
 import functools
 import json
@@ -17,7 +47,18 @@ from transformers import GPT2LMHeadModel, GPT2Tokenizer
 
 
 class JSONFormatter(logging.Formatter):
+    """Custom JSON formatter for logging records."""
+
     def format(self, record):
+        """
+        Format the logging record as a JSON object.
+
+        Parameters:
+        - record (LogRecord): The logging record to format.
+
+        Returns:
+        - str: The JSON-formatted logging record.
+        """
         log_record = {
             "timestamp": self.formatTime(record),
             "level": record.levelname,
@@ -30,6 +71,24 @@ class JSONFormatter(logging.Formatter):
 
 
 def setup_logger(logger_name, style=None, filename=None, json_formatter=False):
+    """
+    Set up a logger with customizable formatting and output options.
+
+    Parameters:
+    - logger_name (str): The name of the logger.
+    - style (str, optional): The style of formatting to use.
+    If set to "color", a colored formatter will be applied.
+    Defaults to None.
+    - filename (str, optional): The path to the log file.
+    If provided, logs will be written to this file.
+    Defaults to None.
+    - json_formatter (bool, optional): Whether to enable JSON formatting for logs.
+    If True, logs will be formatted
+    as JSON objects. Defaults to False.
+
+    Returns:
+    - Logger: The configured logger object.
+    """
     # Create a logger
     configured_logger: Logger = logging.getLogger(logger_name)
     configured_logger.setLevel(logging.INFO)
@@ -70,14 +129,24 @@ local_log_file = Path(f"log_{current_timestamp}.json")
 logger = setup_logger(__name__, filename=local_log_file, json_formatter=True)
 
 
-def handle_errors(logger):
+def handle_errors(error_logger):
+    """
+    A decorator function that wraps another function and handles errors by logging them.
+
+    Args:
+    - logger (Logger): The logger object used for error logging.
+
+    Returns:
+    - function: A wrapped function that handles errors gracefully.
+    """
+
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             try:
                 return func(*args, **kwargs)
             except Exception as e:
-                logger.error(f"An error occurred in {func.__name__}: {e}")
+                error_logger.error(f"An error occurred in {func.__name__}: {e}")
                 raise e
 
         return wrapper
@@ -87,17 +156,42 @@ def handle_errors(logger):
 
 @handle_errors(logger)
 def find_file(file_name):
+    """
+    Search for a file with the specified name recursively starting from the current directory.
+
+    Parameters:
+    - file_name (str): The name of the file to search for.
+
+    Returns:
+    - Path: The path to the first found file.
+
+    Raises:
+    - FileNotFoundError: If the specified file is not found.
+    """
     # Search for the file recursively starting from the current directory
     found_files = list(Path.cwd().rglob(file_name))
 
     if found_files:
         return found_files[0]  # Return the first found file
-    else:
-        raise FileNotFoundError  # Return None if the file is not found
+    raise FileNotFoundError  # Return None if the file is not found
 
 
 @handle_errors(logger)
 def copy_file_and_get_filename(file_path_str):
+    """
+    Copy the file specified by the input path to the directory where the script is located.
+
+    If the file already exists in the script's directory, the existing file is used.
+    If the file does not exist, it searches for the file recursively
+    starting from the current directory.
+    The copied file's name is returned.
+
+    Parameters:
+    - file_path_str (str): Path to the file to be copied.
+
+    Returns:
+    - str: The name of the copied file.
+    """
     # Convert the input string to a Path object
     supposed_path = Path(file_path_str)
     # Find existing path
@@ -119,6 +213,12 @@ def copy_file_and_get_filename(file_path_str):
 
 @handle_errors(logger)
 def reformat_to_wav(filename):
+    """
+    Convert an audio file from MP3 to WAV format.
+
+    Parameters:
+    - filename (str): Input audio file name.
+    """
     sound = AudioSegment.from_mp3(filename)
     sound.export(filename, format="wav")
 
@@ -278,9 +378,14 @@ def validate_and_reformat_audio_file(audio_file):
     if audio_file.endswith(".wav") or audio_file.endswith(".mp3"):
         reformat_to_wav(audio_file)
         try:
-            with wave.open(audio_file, "rb") as f:
+            with wave.open(audio_file, "rb"):
                 return True
-        except wave.Error:
+        except wave.Error as e:
+            logger.warning(
+                "An error occurred while validating the file format "
+                "by trying to open it with WAV: %s",
+                e,
+            )
             return False
     else:
         return False
@@ -297,7 +402,10 @@ def process_audio_file(input_audio_file):
     """
     # Validate audio file format
     if not validate_and_reformat_audio_file(input_audio_file):
-        error_message = "Error: Unsupported audio file format. Please provide a WAV or MP3 audio file."
+        error_message = (
+            "Error: Unsupported audio file format. "
+            "Please provide a WAV or MP3 audio file."
+        )
         print(error_message)
         logger.error(error_message)
         return
@@ -311,7 +419,7 @@ def process_audio_file(input_audio_file):
 
     # Check the response in the audio file:
     response = convert_speech_to_text(output_audio_file)
-    logger.info(f'The obtained response is "{response}".')
+    logger.info('The obtained response is "%s".', response)
 
     # Clean up temporary files
     Path(output_audio_file).unlink()
@@ -340,7 +448,7 @@ def run():
     )
 
     args = parser.parse_args()
-    is_interactive = True if args.interactive else False
+    is_interactive = bool(args.interactive)
     input_file = (
         input(
             "Please enter the path to the audio file you want to process (wav or mp3):"
