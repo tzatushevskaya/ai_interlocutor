@@ -27,62 +27,16 @@ jobs:
           exit 1
           fi
 
-      - name: Check if docker is available
-        run: docker info
-
-      - name: Check if the directory has Dockerfile
+      - name: Install project dependencies
         run: |
-          if [ -f ${TASK_FOLDER}/Dockerfile ]; then
-          echo "Dockerfile exists."
-          else
-          echo "Dockerfile not found."
-          exit 1
-          fi
+          pip install --no-cache-dir -r "${{ env.TASK_FOLDER }}/requirements.txt"
+          pip3 install torch --index-url https://download.pytorch.org/whl/cu118
+          pip install ffmpeg-downloader==0.3.0
+          ffdl install -y
 
-      - name: Build Docker image
-        run: |
-          cd ${TASK_FOLDER}
-          docker build -t ${IMAGE_NAME}:0.1 -f ./Dockerfile .
+      - name: Run tests
+        run: python -m unittest -v
 
-      - name: Verify if the image was created
-        run: |
-          docker images | grep ${IMAGE_NAME}
-          if [ $? -eq 0 ]; then
-          echo "Image was created"
-          else exit 1
-          fi
-          docker image inspect ${IMAGE_NAME}:0.1 > /dev/null
-        
-
-#      - name: Run tests in Docker container
-#        run: |
-#          docker run --rm ${IMAGE_NAME}:0.1 python -m unittest discover -v
-
-#      - name: Run Docker container
-#        run: |
-#         docker run -d --name ${CONTAINER_NAME} ${IMAGE_NAME}:0.1 > result.txt
-#         docker exec ${CONTAINER_NAME} cp /app/log.json /tmp/log.json
-#         RESPONSE=$(cat result.txt)
-#         echo "Logs: $(cat log.json)"
-#         if [ "$RESPONSE"  = "${EXPECTED_RESPONSE}" ]; then
-#            echo "Unexpected output: $RESPONSE"
-#            exit 1
-#         fi
-#
-#      - name: Copy log file from container
-#        run: |
-#          mkdir -p ${TASK_FOLDER}/logs
-#          docker cp ${CONTAINER_NAME}:/tmp/log.json ${TASK_FOLDER}/logs/log.json
-#
-#      - name: Validate log file
-#        run: |
-#          cat ${TASK_FOLDER}/logs/log.json
-#
-#      - name: Setup tmate session
-#        if: ${{ failure() }}
-#        uses: mxschmitt/action-tmate@v3
-#          RESPONSE=$(cat ${TASK_FOLDER}/logs/log.json)
-#          if [ "$RESPONSE" != "${EXPECTED_RESPONSE}" ]; then
-#            echo "Unexpected output: $RESPONSE"
-#            exit 1
-#          fi
+      - name: Setup tmate session
+        if: ${{ failure() }}
+        uses: mxschmitt/action-tmate@v3

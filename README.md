@@ -105,8 +105,17 @@ source myenv/bin/activate
 pip install --no-cache-dir -r requirements.txt .
 ```
 
-Install the ffmpeg:
+Install the PyTorch (unfortunately it may not work directly from requirements, 
+please find out the particular endpoint dependent on you machine specs 
+on the [official pytorch site](https://pytorch.org/)). 
+The one below is what worked for me:
 ```bash
+pip3 install torch --index-url https://download.pytorch.org/whl/cu118
+```
+
+Install the ffmpeg (if you don't have one!):
+```bash
+pip install ffmpeg-downloader==0.3.0
 ffdl install -y
 ```
 
@@ -137,5 +146,5 @@ Follow the prompts to provide the path to the input audio file when prompted.
 ## Testing the Application
 Execute the unit tests:
 ```bash
-python test_main.py
+python -m unittest -v
 ```

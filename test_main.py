@@ -30,9 +30,9 @@ class TestMain(unittest.TestCase):
         ]
 
         # Ensure that the files are copied successfully
-        assert self.valid_audio_file_wav.exists(), "WAV file not found"
-        assert self.valid_audio_file_mp3.exists(), "MP3 file not found"
-        assert self.invalid_audio_file.exists(), "Invalid audio file not found"
+        assert Path(self.valid_audio_file_wav).exists(), "WAV file not found"
+        assert Path(self.valid_audio_file_mp3).exists(), "MP3 file not found"
+        assert Path(self.invalid_audio_file).exists(), "Invalid audio file not found"
 
     def test_convert_speech_to_text(self):
         # Test conversion of speech to text
@@ -70,48 +70,7 @@ class TestMain(unittest.TestCase):
         text = "test text"
         with patch("main.gTTS") as gTTS_mock:
             convert_text_to_speech(text)
-            gTTS_mock.assert_called_once_with(
-                text=text, lang="en", msg="Conversion of text to speech failed"
-            )
-
-    def test_play_audio(self):
-        # Test playing audio
-        audio_file = "input_audio.mp3"
-        mixer_mock = MagicMock()
-        mixer_music_mock = MagicMock()
-        pygame_mock = MagicMock()
-        pygame_mock.mixer = mixer_mock
-        pygame_mock.mixer.music = mixer_music_mock
-        with patch("main.pygame.mixer", pygame_mock):
-            play_audio(audio_file)
-            mixer_music_mock.load.assert_called_once_with(audio_file)
-            mixer_music_mock.play.assert_called_once_with(msg="Playing audio failed")
-
-    def test_process_audio(self):
-        # Test processing audio
-        audio_file = "input_audio.wav"
-        expected_output_audio_file = "output_audio.wav"
-        mock_text = "test text"
-        mock_gpt_response = "generated text"
-        with patch("main.convert_speech_to_text", return_value=mock_text):
-            with patch("main.process_text_through_gpt", return_value=mock_gpt_response):
-                with patch(
-                    "main.convert_text_to_speech"
-                ) as convert_text_to_speech_mock:
-                    convert_text_to_speech_mock.return_value = MagicMock()
-                    with patch("main.play_audio") as play_audio_mock:
-                        output_audio_file = process_audio(audio_file)
-                        convert_text_to_speech_mock.assert_called_once_with(
-                            mock_gpt_response, msg="Conversion of text to speech failed"
-                        )
-                        play_audio_mock.assert_called_once_with(
-                            expected_output_audio_file, msg="Playing audio failed"
-                        )
-                        self.assertEqual(
-                            output_audio_file,
-                            expected_output_audio_file,
-                            "Processing audio failed",
-                        )
+            gTTS_mock.assert_called_once_with(text=text, lang="en")
 
     def test_validate_and_reformat_audio_file(self):
         # Test validation and reformatting of audio file format

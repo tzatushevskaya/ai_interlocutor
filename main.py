@@ -1,7 +1,7 @@
 """
 This module implements an AI Interlocutor, which automates the conversion of speech to text,
 processes the text through a preconfigured GPT model acting as a specific expert,
-converts the GPT's textual response back to speech, and finally plays the resulting audio.
+converts the textual response from GPT back to speech, and finally plays the resulting audio.
 
 The main functionalities include:
 - Converting speech from an audio file to text using Google's Speech Recognition.
@@ -220,7 +220,8 @@ def reformat_to_wav(filename):
     - filename (str): Input audio file name.
     """
     sound = AudioSegment.from_mp3(filename)
-    sound.export(filename, format="wav")
+    out_ = sound.export(filename, format="wav")
+    out_.close()
 
 
 @handle_errors(logger)
@@ -255,7 +256,12 @@ def process_text_through_gpt(text):
     tokenizer = GPT2Tokenizer.from_pretrained("gpt2-medium")
     model = GPT2LMHeadModel.from_pretrained("gpt2-medium")
     input_ids = tokenizer.encode(text, return_tensors="pt")
-    output = model.generate(input_ids, max_length=100, num_return_sequences=1)
+    output = model.generate(
+        input_ids,
+        max_length=100,
+        num_return_sequences=1,
+        pad_token_id=tokenizer.eos_token_id,
+    )
     generated_text = tokenizer.decode(output[0], skip_special_tokens=True)
     cleaned_up_text = remove_repetitive_sentences(generated_text)
     return cleaned_up_text
