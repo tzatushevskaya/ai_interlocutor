@@ -84,7 +84,7 @@ micromamba create -n myenv python=3.9.16
 micromamba activate myenv
 
 # Install project dependencies
-pip install --no-cache-dir -r requirements.txt .
+pip install --no-cache-dir -r requirements.txt
 ```
 
 ### Using venv
@@ -99,7 +99,7 @@ python -m venv myenv
 source myenv/bin/activate
 
 # Install project dependencies
-pip install --no-cache-dir -r requirements.txt .
+pip install --no-cache-dir -r requirements.txt
 ```
 
 Install the PyTorch (unfortunately it may not work directly from requirements, 
