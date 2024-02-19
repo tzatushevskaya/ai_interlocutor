@@ -54,9 +54,6 @@ Evaluation Criteria:
 - Error Handling: The application gracefully handles and reports errors, such as unsupported audio formats or failure in any processing stage.
 
 
-This Python application automates the conversion of speech to text, processes the text through a preconfigured GPT model
-acting as a specific expert, converts the GPT's textual response back to speech, and finally plays the resulting audio.
-
 ## Prerequisites
 
 This project requires a Linux operating system to run.
@@ -132,6 +129,7 @@ Run the app in interactive mode:
 ```bash
 python main.py -i
 ```
+Follow the prompts to provide the path to the input audio file when prompted.
 
 ### With Parameters
 
@@ -140,8 +138,6 @@ Run the app with the desired parameters:
 python main.py <path_to_audio_file>
 ```
 Replace `<path_to_audio_file>` with the path to the audio file you want to process.
-
-Follow the prompts to provide the path to the input audio file when prompted.
 
 ## Testing the Application
 Execute the unit tests:
