@@ -1,5 +1,5 @@
-/log.json
 /.idea/.gitignore
 /.idea/misc.xml
 /.idea/modules.xml
 /.idea/pythonProject.iml
+/log_*.json
