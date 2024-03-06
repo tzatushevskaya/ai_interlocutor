@@ -1,0 +1,30 @@
+# Git directories and files
+.git
+.gitignore
+
+# Docker
+.dockerignore
+Dockerfile
+
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+
+# Development environments
+.venv
+.env
+*.egg-info
+
+# Operating System Files
+.DS_Store
+Thumbs.db
+
+# IDE specific files
+.idea
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp

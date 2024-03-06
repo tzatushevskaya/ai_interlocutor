@@ -2,7 +2,8 @@
 
 ## Task
 
-Develop a Python application that automates the conversion of speech to text, processes the text through a preconfigured GPT model acting as a specific expert, converts the GPT's textual response back to speech, and finally plays the resulting audio. This entire process should be executable on a local computer environment without the need for internet connectivity once all components are installed.
+Develop a Python application that automates the conversion of speech to text, processes the text through a preconfigured GPT model acting as a specific expert, converts the GPT's textual response back to speech, and finally plays the resulting audio. 
+This entire process should be executable on a local computer environment without the need for internet connectivity once all components are installed.
 
 Requirements:
 
@@ -57,6 +58,7 @@ Evaluation Criteria:
 ## Prerequisites
 
 This project requires a Linux operating system to run.
+In order to run it inside the docker container docker must be installed.
 
 ## Installation
 
@@ -114,6 +116,26 @@ Install the ffmpeg (if you don't have one!):
 ```bash
 pip install ffmpeg-downloader==0.3.0
 ffdl install -y
+```
+
+### Using docker
+
+Build a docker image:
+```bash
+docker build -f <image_name>:<tag> -f Dockerfile .
+```
+i.e.
+```bash
+docker build -f ai_i:0.1 -f Dockerfile .
+```
+
+Run the container (demo mode):
+```bash
+docker run --device /dev/snd <image_name>:<tag>
+```
+i.e.
+```bash
+docker run --device /dev/snd ai_i:0.1
 ```
 
 ## Running the Application
